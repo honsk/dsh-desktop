@@ -17,7 +17,7 @@ Windows 个人使用的 DSH 快速启动桌面壳，基于 Tauri 2 + Vue 3 + Typ
 ## 本地开发
 
 ```powershell
-cd C:\Users\28364\tauri-app
+cd 你的项目目录
 npm install
 npm run tauri dev
 ```
