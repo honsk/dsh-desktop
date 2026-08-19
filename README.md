@@ -137,7 +137,7 @@ npm run bundle:installer
 
 ## 📝 License
 
-> 待补充：你可以选择 MIT、Apache 2.0 等开源协议。
+本项目使用 [MIT License](LICENSE)。
 
 <!--
 
