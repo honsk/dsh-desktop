@@ -11,6 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+*.pem
+*.key
+*.p12
+!.env.example
 src-tauri/target
 release
 
