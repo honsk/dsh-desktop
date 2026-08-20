@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -252,6 +253,20 @@ fn open_in_browser(url: &str) {
     }
 }
 
+fn wait_for_port(port: u16, timeout: Duration) -> bool {
+    let start = SystemTime::now();
+    loop {
+        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
+            return true;
+        }
+        if start.elapsed().unwrap_or_default() >= timeout {
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
+
 #[cfg(windows)]
 fn get_child_process_ids(parent_pid: u32) -> Vec<u32> {
     let output = Command::new("wmic")
@@ -395,8 +410,15 @@ fn start_dsh_inner(app: &AppHandle, state: &AppState) -> Result<DshStatus, Strin
     *guard = Some(child);
 
     if settings.auto_open_browser {
-        let url = format!("http://127.0.0.1:{}", settings.port);
-        open_in_browser(&url);
+        let port = settings.port;
+        let url = format!("http://127.0.0.1:{port}");
+        std::thread::spawn(move || {
+            if wait_for_port(port, Duration::from_secs(30)) {
+                open_in_browser(&url);
+            } else {
+                eprintln!("等待 DSH Web 启动超时，未打开浏览器");
+            }
+        });
     }
 
     let _ = app.emit("dsh-status", "running");
@@ -1055,8 +1077,13 @@ fn get_dsh_status(state: State<'_, AppState>) -> DshStatus {
 #[tauri::command]
 fn open_dsh_web(state: State<'_, AppState>) -> Result<(), String> {
     let settings = state.settings.lock().unwrap().clone();
-    open_in_browser(&format!("http://127.0.0.1:{}", settings.port));
-    Ok(())
+    let url = format!("http://127.0.0.1:{}", settings.port);
+    if wait_for_port(settings.port, Duration::from_secs(10)) {
+        open_in_browser(&url);
+        Ok(())
+    } else {
+        Err("等待 DSH Web 启动超时，请确认服务是否正常运行".into())
+    }
 }
 
 #[tauri::command]
